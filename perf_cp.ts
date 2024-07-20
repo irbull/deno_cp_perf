@@ -1,18 +1,16 @@
 import { join } from "jsr:@std/path/join";
 
-try {
-  Deno.removeSync("./temp", { recursive: true });
-  Deno.removeSync("./tempShellCopy", { recursive: true });
-  Deno.removeSync("./tempAsyncCopy", { recursive: true });
-  Deno.removeSync("./tempSyncCopy", { recursive: true });
-} catch {
-  // ignore if it doesn't exist
-}
+safeDelete("./temp");
+safeDelete("./tempShellCopy");
+safeDelete("./tempAsyncCopy");
+safeDelete("./tempSyncCopy");
+
+// Create Files
 Deno.mkdirSync("./temp", { recursive: true });
 createTempFiles("./temp", 10_000);
 console.log("Files created");
 
-const cwd = Deno.cwd();
+// Copy Files in different ways and measure time
 const start = performance.now();
 await cpShell("temp", "./tempShellCopy");
 const shellPerf = performance.now();
@@ -25,7 +23,16 @@ console.log(`Shell: ${shellPerf - start}ms`);
 console.log(`Async: ${asyncPerf - shellPerf}ms`);
 console.log(`Sync: ${syncPerf - asyncPerf}ms`);
 
+function safeDelete(path: string): void {
+  try {
+    Deno.removeSync(path, { recursive: true });
+  } catch {
+    // ignore if it doesn't exist
+  }
+}
+
 async function cpShell(src: string, dest: string) {
+  const cwd = Deno.cwd();
   Deno.mkdirSync(dest, { recursive: true });
   const command = new Deno.Command("sh", {
     args: [
